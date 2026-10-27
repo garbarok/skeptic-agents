@@ -1,0 +1,23 @@
+{
+  "name": "skeptic-agents",
+  "owner": {
+    "name": "skeptic-agents contributors"
+  },
+  "description": "Agent skills that build and research in parallel, then try to prove the result wrong before you merge it.",
+  "plugins": [
+    {
+      "name": "skeptic-agents",
+      "source": "./",
+      "description": "skeptic-build and skeptic-research: parallel agents with an adversarial verifier.",
+      "category": "engineering",
+      "keywords": [
+        "multi-agent",
+        "verification",
+        "research"
+      ],
+      "author": {
+        "name": "skeptic-agents contributors"
+      }
+    }
+  ]
+}

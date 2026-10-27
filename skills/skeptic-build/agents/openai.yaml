@@ -1,0 +1,5 @@
+interface:
+  display_name: "Skeptic build"
+  short_description: "Build a batch, attack it, fix it, merge it"
+policy:
+  allow_implicit_invocation: false

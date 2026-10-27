@@ -1,0 +1,5 @@
+interface:
+  display_name: "Skeptic research"
+  short_description: "Parallel research angles into one sourced plan"
+policy:
+  allow_implicit_invocation: false
