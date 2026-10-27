@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.4
+
+- `skeptic-build`: the merge step now starts by writing a batch record (`.skeptic/batches/<date>.json`) with each item's commits, fix and verdicts, read only after the pipeline's completion notice. Anything that later cites the batch reads that record, since a mid-run `git log` is stale and item branches are deleted after the merge.
+
 ## 0.1.3
 
 - `skeptic-build`: worktrees no longer outlive their item. The workflow removes each item's worktree as soon as it is verified and fixed (or fails), committing any leftover changes to its branch first; held items keep only their branch. The merge step removes the integration worktree too and ends by checking `git worktree list`.

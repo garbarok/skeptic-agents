@@ -94,16 +94,17 @@ Use your fastest model for research, a capable one to build, and your strongest 
 
 ### Mode C: no subagents
 
-Run the same steps yourself, one item at a time, one role at a time. Before each step, re-read that role's file and act only as that role. For each verify step (correctness, standards, each lens), start again from the brief and the sources, not from your memory of building it: re-read the files on disk and run the checks. Write each step's output to `.skeptic/<id>/<step>.md` so later steps read the record, not your recollection. Delete `.skeptic/` after the merge.
+Run the same steps yourself, one item at a time, one role at a time. Before each step, re-read that role's file and act only as that role. For each verify step (correctness, standards, each lens), start again from the brief and the sources, not from your memory of building it: re-read the files on disk and run the checks. Write each step's output to `.skeptic/<id>/<step>.md` so later steps read the record, not your recollection. Delete the `.skeptic/<id>/` folders after the merge; keep `.skeptic/batches/`.
 
 ## 5. Merge and report
 
 Worktrees are scratch space. None is left on disk when this step ends: not for merged items, not for held ones, not the one you use for the integration branch.
 
-1. Merge each item that finished with checks passing and no blocker or major issue left into the integration branch, one at a time. Resolve conflicts in the shared files by keeping every item's addition.
-2. Run the repo's full checks once on the integration branch, production build included. If you need a checkout of it, make a temporary worktree and remove it as soon as the merge to the main branch lands. A failure is yours to fix there, before anything reaches the main branch.
-3. Bring the integration branch into the main branch following the repo's and the user's rules (pull request, or a merge to the main branch, hooks). Never push without the user's rules allowing it.
-4. Once that lands, clean up: `git worktree remove --force` every worktree this batch created (items and integration, merged or held), `git worktree prune`, and `git branch -D` every merged `skeptic/*` branch, the integration branch included. Held items keep only their branch; reopen a worktree from it when you pick the item up again. Check `git worktree list` shows none left.
-5. Report to the user: a table of items (merged or held, and why) with the correctness and standards verdicts in separate columns, what stayed unverified, the advisor's ranked advice and the follow-ups. Don't rerank findings across axes into one list.
+1. Wait for the pipeline's completion notice before reading any item's state: branches still change while agents commit, so a mid-run `git log` is a stale reading. Then write the **batch record** `.skeptic/batches/<YYYY-MM-DD>.json` with, per item: id, branch, its commits in order (build and fix), whether a fix ran, each axis verdict, and what stayed unverified. Branches are deleted in step 5, so this file is what later work (an article, a PR description, a retro) cites about the batch, never live branches.
+2. Merge each item that finished with checks passing and no blocker or major issue left into the integration branch, one at a time. Resolve conflicts in the shared files by keeping every item's addition.
+3. Run the repo's full checks once on the integration branch, production build included. If you need a checkout of it, make a temporary worktree and remove it as soon as the merge to the main branch lands. A failure is yours to fix there, before anything reaches the main branch.
+4. Bring the integration branch into the main branch following the repo's and the user's rules (pull request, or a merge to the main branch, hooks). Never push without the user's rules allowing it.
+5. Once that lands, clean up: `git worktree remove --force` every worktree this batch created (items and integration, merged or held), `git worktree prune`, and `git branch -D` every merged `skeptic/*` branch, the integration branch included. Held items keep only their branch; reopen a worktree from it when you pick the item up again. Check `git worktree list` shows none left.
+6. Report to the user, from the batch record: a table of items (merged or held, and why) with the correctness and standards verdicts in separate columns, what stayed unverified, the advisor's ranked advice and the follow-ups. Don't rerank findings across axes into one list.
 
 Done when every item is either merged or held with its reason and branch named, and `git worktree list` shows no worktree from this batch.
