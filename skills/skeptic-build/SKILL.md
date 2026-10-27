@@ -59,10 +59,11 @@ Pick the first mode your environment supports.
 
 ### Mode A: Claude Code with the Workflow tool
 
-Check out the integration branch first, so every item's worktree starts from it. Read the four files in `roles/`, then call Workflow with `scriptPath` set to the absolute path of `workflow.js` in this skill's directory and these `args`:
+Read the four files in `roles/`, then call Workflow with `scriptPath` set to the absolute path of `workflow.js` in this skill's directory and these `args`. If Workflow refuses that path because it sits outside the session's directories, pass the file's contents as `script` instead.
 
 ```json
 {
+  "base": "skeptic/batch-<YYYY-MM-DD>",
   "checks": "<fast checks joined with &&>",
   "standards": ["AGENTS.md", "CONTRIBUTING.md"],
   "rules": "<one paragraph of repo rules every agent must follow: language, commit style, no invented figures>",
@@ -71,7 +72,7 @@ Check out the integration branch first, so every item's worktree starts from it.
 }
 ```
 
-Optional `"models": { "research": "haiku", "build": "sonnet", "verify": "opus", "advise": "opus" }` overrides the defaults shown. The script gives each item one git worktree, runs correctness, standards and the lenses in parallel inside it, read-only, and only calls the fixer when a blocker or major finding survives. While it runs, keep working on other things; the completion notice brings you back.
+Optional `"models": { "research": "haiku", "build": "sonnet", "verify": "opus", "advise": "opus" }` overrides the defaults shown. Each item's implementer creates its own worktree next to the repo (`<repo>-skeptic-<id>`) from `base` with `git worktree add`, so your checkout and its branch stay as they are. The script does not use the Workflow tool's worktree isolation, which refuses repos where `.claude` is a symlink. It runs correctness, standards and the lenses in parallel inside that worktree, read-only, and only calls the fixer when a blocker or major finding survives. While it runs, keep working on other things; the completion notice brings you back.
 
 ### Mode B: an agent that can start subagents
 

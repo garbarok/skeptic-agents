@@ -1,6 +1,6 @@
 {
   "name": "skeptic-agents",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Agent skills that build and research in parallel, then try to prove the result wrong before you merge it.",
   "repository": {
