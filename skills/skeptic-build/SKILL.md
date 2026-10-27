@@ -72,7 +72,7 @@ Read the four files in `roles/`, then call Workflow with `scriptPath` set to the
 }
 ```
 
-Optional `"models": { "research": "haiku", "build": "sonnet", "verify": "opus", "advise": "opus" }` overrides the defaults shown. Each item's implementer creates its own worktree next to the repo (`<repo>-skeptic-<id>`) from `base` with `git worktree add`, so your checkout and its branch stay as they are. The script does not use the Workflow tool's worktree isolation, which refuses repos where `.claude` is a symlink. It runs correctness, standards and the lenses in parallel inside that worktree, read-only, and only calls the fixer when a blocker or major finding survives. While it runs, keep working on other things; the completion notice brings you back.
+Optional `"models": { "research": "haiku", "build": "sonnet", "verify": "opus", "advise": "opus" }` overrides the defaults shown. Each item's implementer creates its own worktree next to the repo (`<repo>-skeptic-<id>`) from `base` with `git worktree add`, so your checkout and its branch stay as they are. Its first step links the main checkout's installed dependencies (`node_modules`, `.venv`, `vendor`) instead of installing them, so a large batch costs a few MB of disk per item; it installs only when the item itself changes a dependency, after removing the link so the main checkout's copy is never touched. The script does not use the Workflow tool's worktree isolation, which refuses repos where `.claude` is a symlink. It runs correctness, standards and the lenses in parallel inside that worktree, read-only, and only calls the fixer when a blocker or major finding survives. While it runs, keep working on other things; the completion notice brings you back.
 
 ### Mode B: an agent that can start subagents
 
@@ -83,7 +83,7 @@ Talk to subagents through **pointers**, not pasted content: the researcher saves
 For each item:
 
 1. **Researcher** (skip when sources are `"repo only"`): writes facts with URLs and an `unverified` list to `.skeptic/<id>/research.md`.
-2. **Implementer**: creates a worktree for branch `skeptic/<id>` from the integration branch (`git worktree add ../<repo>-skeptic-<id> -b skeptic/<id> skeptic/batch-<date>`), builds there, runs the fast checks, commits. Returns branch, commit, worktree path and what stayed unverified.
+2. **Implementer**: creates a worktree for branch `skeptic/<id>` from the integration branch (`git worktree add ../<repo>-skeptic-<id> -b skeptic/<id> skeptic/batch-<date>`), symlinks the main checkout's installed dependency directories (`node_modules`, `.venv`, `vendor`) into it instead of installing, builds there, runs the fast checks, commits. Returns branch, commit, worktree path and what stayed unverified.
 3. **Verifiers**, in parallel, all read-only in that worktree: one for correctness, one for standards (give it the standards files), one per lens. Each returns `pass` or `fail` with issues.
 4. **Implementer** again, only if a blocker or major issue survives, to fix in the same worktree.
 

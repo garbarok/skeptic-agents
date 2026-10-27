@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2
+
+- `skeptic-build`: linking the main checkout's installed dependencies (`node_modules`, `.venv`, `vendor`) into each worktree is now the implementer's mandatory first step, instead of a hint. It installs only when the item changes a dependency, after removing the link, so the shared copy is never modified.
+
 ## 0.1.1
 
 - `skeptic-build`: the Claude Code workflow creates each item's worktree with `git worktree add` next to the repo instead of the Workflow tool's worktree isolation, which refused any repo where `.claude` is a symlink. New optional `base` arg (default `HEAD`) sets the branch items start from, so you no longer check out the integration branch first. `SKILL.md` notes passing the script inline when Workflow refuses its path.
