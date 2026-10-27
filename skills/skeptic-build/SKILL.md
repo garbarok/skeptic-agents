@@ -72,7 +72,7 @@ Read the four files in `roles/`, then call Workflow with `scriptPath` set to the
 }
 ```
 
-Optional `"models": { "research": "haiku", "build": "sonnet", "verify": "opus", "advise": "opus" }` overrides the defaults shown. Each item's implementer creates its own worktree next to the repo (`<repo>-skeptic-<id>`) from `base` with `git worktree add`, so your checkout and its branch stay as they are. Its first step links the main checkout's installed dependencies (`node_modules`, `.venv`, `vendor`) instead of installing them, so a large batch costs a few MB of disk per item; it installs only when the item itself changes a dependency, after removing the link so the main checkout's copy is never touched. The script does not use the Workflow tool's worktree isolation, which refuses repos where `.claude` is a symlink. It runs correctness, standards and the lenses in parallel inside that worktree, read-only, and only calls the fixer when a blocker or major finding survives. While it runs, keep working on other things; the completion notice brings you back.
+Optional `"models": { "research": "haiku", "build": "sonnet", "verify": "opus", "advise": "opus" }` overrides the defaults shown. Each item's implementer creates its own worktree next to the repo (`<repo>-skeptic-<id>`) from `base` with `git worktree add`, so your checkout and its branch stay as they are. Its first step links the main checkout's installed dependencies (`node_modules`, `.venv`, `vendor`) instead of installing them, so a large batch costs a few MB of disk per item; it installs only when the item itself changes a dependency, after removing the link so the main checkout's copy is never touched. The script does not use the Workflow tool's worktree isolation, which refuses repos where `.claude` is a symlink. It runs correctness, standards and the lenses in parallel inside that worktree, read-only, only calls the fixer when a blocker or major finding survives, and then removes the worktree, whatever the outcome: the branch keeps the work. While it runs, keep working on other things; the completion notice brings you back.
 
 ### Mode B: an agent that can start subagents
 
@@ -86,6 +86,7 @@ For each item:
 2. **Implementer**: creates a worktree for branch `skeptic/<id>` from the integration branch (`git worktree add ../<repo>-skeptic-<id> -b skeptic/<id> skeptic/batch-<date>`), symlinks the main checkout's installed dependency directories (`node_modules`, `.venv`, `vendor`) into it instead of installing, builds there, runs the fast checks, commits. Returns branch, commit, worktree path and what stayed unverified.
 3. **Verifiers**, in parallel, all read-only in that worktree: one for correctness, one for standards (give it the standards files), one per lens. Each returns `pass` or `fail` with issues.
 4. **Implementer** again, only if a blocker or major issue survives, to fix in the same worktree.
+5. **Clean up**, always, whatever the outcome: commit anything left uncommitted on the item's branch, then `git worktree remove --force` the worktree and `git worktree prune`. The branch keeps the work; worktrees never outlive their item.
 
 Run items in parallel when your agent allows it. Start an item's verifiers as soon as its build finishes; don't wait for the other items. After all items, start one **advisor** subagent with the results table.
 
@@ -97,10 +98,12 @@ Run the same steps yourself, one item at a time, one role at a time. Before each
 
 ## 5. Merge and report
 
+Worktrees are scratch space. None is left on disk when this step ends: not for merged items, not for held ones, not the one you use for the integration branch.
+
 1. Merge each item that finished with checks passing and no blocker or major issue left into the integration branch, one at a time. Resolve conflicts in the shared files by keeping every item's addition.
-2. Run the repo's full checks once on the integration branch, production build included. A failure is yours to fix there, before anything reaches the main branch.
+2. Run the repo's full checks once on the integration branch, production build included. If you need a checkout of it, make a temporary worktree and remove it as soon as the merge to the main branch lands. A failure is yours to fix there, before anything reaches the main branch.
 3. Bring the integration branch into the main branch following the repo's and the user's rules (pull request, or a merge to the main branch, hooks). Never push without the user's rules allowing it.
-4. Once that lands, clean up: `git worktree remove --force` every merged item's worktree, `git worktree prune`, and `git branch -D` every merged `skeptic/*` branch, the integration branch included. Held items keep their worktree and branch.
+4. Once that lands, clean up: `git worktree remove --force` every worktree this batch created (items and integration, merged or held), `git worktree prune`, and `git branch -D` every merged `skeptic/*` branch, the integration branch included. Held items keep only their branch; reopen a worktree from it when you pick the item up again. Check `git worktree list` shows none left.
 5. Report to the user: a table of items (merged or held, and why) with the correctness and standards verdicts in separate columns, what stayed unverified, the advisor's ranked advice and the follow-ups. Don't rerank findings across axes into one list.
 
-Done when every item is either merged, checked and cleaned up, or held with its reason and branch named.
+Done when every item is either merged or held with its reason and branch named, and `git worktree list` shows no worktree from this batch.

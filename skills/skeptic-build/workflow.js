@@ -7,6 +7,7 @@ export const meta = {
     { title: 'Implement', detail: 'one worktree branch per item' },
     { title: 'Verify', detail: 'correctness and lenses in parallel, read-only' },
     { title: 'Fix', detail: 'blocker and major findings only' },
+    { title: 'Clean up', detail: 'remove every item worktree; the branch keeps the work' },
     { title: 'Advise', detail: 'one review of the whole batch' },
   ],
 }
@@ -63,6 +64,12 @@ const FIXED = {
   required: ['branch', 'commit', 'checksPassed'],
 }
 
+// Worktrees are scratch space: each one is removed as soon as its item is done, held or failed.
+// The branch keeps the work, and the merge step reads branches, not worktrees.
+const cleanup = (it) => agent(
+  `Remove the git worktree of item "${it.id}". From the repo's main checkout, the path is ${worktreeOf(it.id)}. If it does not exist, say so and stop. If \`git -C <path> status --porcelain\` shows changes other than dependency symlinks (node_modules, .venv, vendor), first commit them on that worktree's branch with the message "wip(${it.id}): uncommitted work left at cleanup", so nothing is lost. Then run \`git worktree remove --force <path>\` and \`git worktree prune\`, and confirm the directory is gone. Never delete the branch, and never touch the main checkout's files.`,
+  { label: `cleanup:${it.id}`, phase: 'Clean up', model: 'haiku' })
+
 const commitRule = 'Commit everything on the branch in one commit following the repo\'s message style (git log --oneline -10) and its trailer rules. Do not push or merge.'
 
 const results = await pipeline(
@@ -76,6 +83,13 @@ const results = await pipeline(
     `${role('implementer')}Implement this item in its own git worktree. You start in the repo's main checkout: create the worktree with \`git worktree add ${worktreeOf(it.id)} -b skeptic/${it.id} ${BASE}\` (if that path already exists from an earlier run, reuse it), cd into it and do all the work there. Never edit, check out or commit in the main checkout. ${DEPS}\n\nItem: ${it.title}\n${it.brief}\n\nResearched facts (re-check any you rely on against its URL; drop what is unverified):\n${JSON.stringify(research)}\n\nRepo rules: ${RULES}\n\nBefore committing, these must pass: ${CHECKS} (fast checks only: the full production build runs once at merge time).\n${commitRule} Return the branch, commit, the absolute path of this worktree (\`pwd\`), files, whether checks passed, and what stayed unverified.`,
     { label: `build:${it.id}`, phase: 'Implement', schema: BUILD, model: MODELS.build }),
   async (build, it) => {
+    const result = await review(build, it)
+    await cleanup(it)
+    return result
+  },
+)
+
+async function review(build, it) {
     if (!build || !build.commit) return { it, build, verdicts: [], final: build }
     const inspect = `The work is in the worktree ${build.worktree} on branch ${build.branch}. Work there read-only: read files and run the fast checks (${CHECKS}); edit nothing, commit nothing, install nothing.`
     const lenses = [
@@ -92,11 +106,10 @@ const results = await pipeline(
       `${role('implementer')}Fix "${it.title}". Work in the existing worktree ${build.worktree} (cd into it), on its branch ${build.branch}; do not create another worktree or install dependencies.\nApply these findings, re-checking any source a finding cites; if a finding is wrong, leave it and say why:\n${JSON.stringify(issues)}\nRepo rules: ${RULES}\nThese must pass: ${CHECKS}\n${commitRule} Return branch, commit, what you fixed and what remains.`,
       { label: `fix:${it.id}`, phase: 'Fix', schema: FIXED, model: MODELS.build })
     return { it, build, verdicts, final: final || build }
-  },
-)
+}
 
 const summary = results.filter(Boolean).map((r) => ({
-  id: r.it.id, title: r.it.title, worktree: r.build && r.build.worktree,
+  id: r.it.id, title: r.it.title,
   branch: r.final && r.final.branch, commit: r.final && r.final.commit, checksPassed: r.final && r.final.checksPassed,
   verdicts: (r.verdicts || []).map((v, i) => v && ({ axis: ['correctness', 'standards', ...((r.it.lenses || []).map((l) => l.name))][i], verdict: v.verdict, serious: (v.issues || []).filter((x) => x.severity !== 'minor').length })).filter(Boolean),
   remaining: (r.final && r.final.remaining) || [], unverified: (r.build && r.build.unverified) || [],
